@@ -8,6 +8,7 @@ Investigating different approaches to fill the dead time gap in zero echo time m
 Numpy
 Matplotlib
 Pandas
+Sigpy
 
 
 ## Acknowledgements
