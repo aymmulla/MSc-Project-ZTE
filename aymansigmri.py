@@ -259,3 +259,8 @@ def data_consistency(kspace_radial, kspace_radial_acquired, mask):
     kspace_consistent[:, mask] = kspace_radial_acquired[:, mask]
     return kspace_consistent
 
+def im_recon_zte(kspace, radial_coords):
+    dcf = (radial_coords[...,0]**2 + radial_coords[...,1]**2)**0.5
+    im_grid = sp.nufft_adjoint(kspace* dcf, radial_coords)
+    img_rss = np.sum(np.abs(im_grid)**2, axis=0)**0.5
+    pl.ImagePlot(img_rss)
