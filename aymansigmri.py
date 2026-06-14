@@ -326,3 +326,11 @@ def generate_zte_data_trial(ksp, coord,n_missing,undersampling_factor=1):
     acquired_mask[:, :n_missing] = False
 
     return ksp_new, coord_new, ksp_full, coord_full, acquired_mask, ksp_groundtruth, n_points_full
+
+
+def zero_padding(cart_kspace,resize_x, resize_y):
+    n_coils = cart_kspace.shape[0]
+    image_grid = sp.ifft(cart_kspace)
+    enlarged_image_grid = sp.resize(image_grid, [n_coils,resize_x, resize_y])
+    enlarged_cartesian_kspace = sp.fft(enlarged_image_grid, axes=(-2, -1))
+    return enlarged_cartesian_kspace
