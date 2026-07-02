@@ -9,8 +9,11 @@ Numpy
 Matplotlib
 Pandas
 Sigpy
-
+JAX
+Riesling
 
 ## Acknowledgements
 
 This project uses [SigPy](https://github.com/mikgroup/sigpy)
+This project uses [JAX](https://github.com/jax-ml/jax)
+This project uses Riesling
