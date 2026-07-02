@@ -16,4 +16,4 @@ Riesling
 
 This project uses [SigPy](https://github.com/mikgroup/sigpy)
 This project uses [JAX](https://github.com/jax-ml/jax)
-This project uses Riesling
+This project uses [Riesling](https://codeberg.org/spinicist/riesling)
