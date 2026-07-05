@@ -237,16 +237,16 @@ def hankel_H_averaged(data_matrix, n_coils, Nx, Ny, w=3):
         kspace.append(recon.T)
     return np.array(kspace)
 
-def sig_val_thresholding_fast(data, zero_thresh):
-    U, Sigma, Vh = np.linalg.svd(data, full_matrices=False)
+def sig_val_thresholding_jax_soft(data, zero_thresh):
+    U, Sigma, Vh = jx.numpy.linalg.svd(data, full_matrices=False)
     thresh = Sigma.max() * zero_thresh
-    S_reduced = np.where(Sigma > thresh, Sigma, 0)
+    S_reduced = jx.numpy.maximum(Sigma - thresh, 0)
     return U, S_reduced, Vh
 
 def sig_val_thresholding_jax(data, zero_thresh):
     U, Sigma, Vh = jx.numpy.linalg.svd(data, full_matrices=False)
     thresh = Sigma.max() * zero_thresh
-    S_reduced = np.where(Sigma > thresh, Sigma, 0)
+    S_reduced = jx.numpy.where(Sigma > thresh, Sigma, 0)
     return U, S_reduced, Vh
 
 def sig_val_thresholding(data, zero_thresh):
@@ -355,7 +355,7 @@ def plot_mask(isolated_kspace, mask, zte_radial_coords, zte_radial_kspace, inner
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(30, 8))
     
     im = ax[0].imshow(np.abs(isolated_kspace[0]), cmap='viridis', origin='lower')
-    fig.coPbar(im, ax=ax[0], label='kspace value')
+    fig.colorbar(im, ax=ax[0], label='kspace value')
     ax[0].set_title('Cartesian')
     ax[0].set_xlabel('kx')
     ax[0].set_ylabel('ky')
