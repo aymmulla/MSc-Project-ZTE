@@ -138,3 +138,32 @@ def im_recon_cart(kspace):
     grid_recon = sp.ifft(kspace)
     im_rss_recon = np.sum(np.abs(grid_recon)**2, axis=0)**0.5
     pl.ImagePlot(im_rss_recon)
+
+
+def plotdiff(fig, index1, index2, imagearr, axname, numims, cmap='RdBu_r'):
+    if not index2>numims-1:
+        diff = (np.abs(np.abs(imagearr[index1]) - np.abs(imagearr[index2])))/ np.max(np.abs(imagearr[index1]))
+        diff_plot = axname[index1, index2].imshow(diff, cmap)
+        fig.colorbar(diff_plot, ax=axname[index1, index2], fraction=0.046, format='{x:.1%}')
+    
+def plotrowdiffs(fig, rownum, imagearr, axname, numims):
+    for jj in range(numims):
+        if not rownum == rownum+jj:
+            plotdiff(fig,rownum, rownum+jj,imagearr, axname, numims)
+
+def diff_matrix(imdict):
+    titles, imarray = list(imdict.keys()), list(imdict.values())
+    n = len(imarray)
+    n = len(imarray)
+    fig, axs = plt.subplots(n, n, figsize=(4*n, 4*n))
+    for i in range(n):
+        for j in range(n):
+            axs[i, j].axis('off')
+        im = axs[i,i].imshow(np.abs(imarray[i]), cmap='gray')
+        axs[i, i].set_title(f'{titles[i]}')
+        fig.colorbar(im,ax=axs[i,i], fraction=0.046)
+    for ii in range(n):
+        plotrowdiffs(fig, ii, imarray, axs, n)
+
+    plt.tight_layout()
+    plt.show()

@@ -19,7 +19,8 @@ from .plotting_functs import(
     plot_result,
     plot_mask,
     im_recon_zte,
-    im_recon_cart
+    im_recon_cart,
+    diff_matrix
 )
 
 from .zeropadding import(
