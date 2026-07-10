@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sigpy as sp
 import jax as jx
-from . import zte_functs
+from . import gridding_hankel
 
 
 def sig_val_thresholding_jax_soft(data, zero_thresh):
@@ -39,11 +39,11 @@ def LORAKS_loop(n_iters, window_size, zero_thresh, cartesian_inputkspace, dtg_ma
     deltas = []
     k_prev = None
     while iter_count < n_iters:
-        hankel_matrix, n_coils, Numx, Numy = zte_functs.hankel(kspace=ksp_forhankel, w=window_size)
+        hankel_matrix, n_coils, Numx, Numy = gridding_hankel.hankel(kspace=ksp_forhankel, w=window_size)
         U, S_reduced, Vh = sig_val_thresholding_jax(data=hankel_matrix, zero_thresh=zero_thresh)
         data_recon = (U * S_reduced) @ Vh
 
-        kspace_cart_coils_recon = zte_functs.hankel_H_averaged(data_recon, n_coils=ksp_forhankel.shape[0], Nx=ksp_forhankel.shape[1], Ny=ksp_forhankel.shape[2], w=window_size)
+        kspace_cart_coils_recon = gridding_hankel.hankel_H_averaged(data_recon, n_coils=ksp_forhankel.shape[0], Nx=ksp_forhankel.shape[1], Ny=ksp_forhankel.shape[2], w=window_size)
         kspace_cart_coils_consistent = kspace_cart_coils_recon.copy()
 
         for coil in range(ksp_forhankel.shape[0]):

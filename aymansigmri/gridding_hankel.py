@@ -136,3 +136,60 @@ def hankel_H_averaged(data_matrix, n_coils, Nx, Ny, w=3):
         recon = recon / counts
         kspace.append(recon.T)
     return np.array(kspace)
+
+
+def hankel_H_averaged_2(data_matrix, n_coils, Nx, Ny, w=5, s=2):
+    kspace = []
+    split_arr = np.array(np.split(data_matrix, n_coils))
+
+    n_win_x = (Nx - w) // s + 1
+    n_win_y = (Ny - w) // s + 1
+
+    for k in range(len(split_arr)):
+        singlecol = split_arr[k]
+        transposed = singlecol.T
+        windows = []
+        for j in range(len(transposed)):
+            window = transposed[j].reshape(w,w)
+            windows.append(window)
+        windows_full = np.array(windows)
+        
+        recon = np.zeros((Nx, Ny), dtype=np.complex64)
+        counts = np.zeros((Nx, Ny), dtype=np.float32)
+
+        for index, win in enumerate(windows_full): 
+            i = (index // n_win_y) * s
+            j = (index % n_win_y) * s
+            recon[i:i+w, j:j+w] += win
+            counts[i:i+w, j:j+w] += 1
+
+        counts[counts == 0] = 1
+        recon = recon / counts
+        kspace.append(recon.T)
+    return np.array(kspace)
+
+
+def hankel_2(kspace, w, s=2):
+    x = 0
+    y = 0
+    c = 0
+    N_x = (kspace.shape[1] - w) // s + 1
+    N_y = (kspace.shape[2] - w) // s + 1
+    N_c = kspace.shape[0]
+    data_matrix = []
+    for k in range(N_c):
+        onecoil_matrix = np.empty((w*w, N_x*N_y), dtype=np.complex64)
+        col_index = 0
+        for i in range(N_y):
+            for j in range(N_x):
+                mat = kspace[c, x:x+w, y:y+w]
+                col = mat.T.reshape(-1)
+                onecoil_matrix[:, col_index] = col
+                x += s
+                col_index += 1
+            x = 0
+            y += s
+        data_matrix.append(onecoil_matrix)
+        y = 0
+        c += 1
+    return(np.vstack(data_matrix), N_c, N_x, N_y)

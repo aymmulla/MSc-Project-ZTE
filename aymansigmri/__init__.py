@@ -43,4 +43,6 @@ from .gridding_hankel import(
     nufft_degridding,
     hankel,
     hankel_H_averaged,
+    hankel_2,
+    hankel_H_averaged_2
 )
