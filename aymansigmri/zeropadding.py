@@ -49,3 +49,8 @@ def jigsaw(output_kspace, isolation_mask, start, end, enlarged_kspace):
     recombined = enlarged_kspace * isolation_mask ### NOTE: Need to improve this
     recombined[:, start:end, start:end] = processed_isolated_kspace
     return(recombined)
+
+def rebuild(output_kspace, inner_mask, inner_start, inner_end, enlarged_kspace, resize_x, resize_y):
+    recombined = jigsaw(output_kspace=output_kspace, isolation_mask = inner_mask, start=inner_start, end=inner_end, enlarged_kspace=enlarged_kspace)
+    filled_ksp = zero_padding(recombined, resize_x, resize_y)
+    return(filled_ksp)
