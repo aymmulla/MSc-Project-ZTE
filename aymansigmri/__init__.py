@@ -34,7 +34,9 @@ from .loraks_svd import(
     sig_val_thresholding_jax,
     sig_val_thresholding_jax_soft,
     svd_recon,
-    LORAKS_loop
+    LORAKS_loop,
+    softimpute_ALS,
+    LORAKS_imputeals
 )
 
 from .gridding_hankel import(
@@ -48,7 +50,3 @@ from .gridding_hankel import(
     hankel_H_averaged_2
 )
 
-from .ALS import(
-    softimpute_ALS,
-    LORAKS_imputeals
-)
