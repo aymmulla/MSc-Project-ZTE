@@ -26,7 +26,8 @@ from .plotting_functs import(
 from .zeropadding import(
     jigsaw,
     inner_portion,
-    zero_padding
+    zero_padding,
+    rebuild
 )
 
 from .loraks_svd import(

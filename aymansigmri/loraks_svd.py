@@ -17,6 +17,12 @@ def sig_val_thresholding_jax(data, zero_thresh):
     S_reduced = jx.numpy.where(Sigma > thresh, Sigma, 0)
     return U, S_reduced, Vh
 
+def sig_val_thresholding_jax(data, zero_thresh):
+    U, Sigma, Vh = jx.numpy.linalg.svd(data, full_matrices=False)
+    thresh = Sigma.max() * zero_thresh
+    S_reduced = np.where(Sigma > thresh, Sigma, 0)
+    return U, S_reduced, Vh
+
 def sig_val_thresholding(data, zero_thresh):
     U, Sigma, Vh = np.linalg.svd(data, full_matrices=False)
     max_val = np.max(Sigma)
