@@ -151,9 +151,8 @@ def plotrowdiffs(fig, rownum, imagearr, axname, numims):
         if not rownum == rownum+jj:
             plotdiff(fig,rownum, rownum+jj,imagearr, axname, numims)
 
-def diff_matrix(imdict):
+def diff_matrix(imdict, title=None):
     titles, imarray = list(imdict.keys()), list(imdict.values())
-    n = len(imarray)
     n = len(imarray)
     fig, axs = plt.subplots(n, n, figsize=(4*n, 4*n))
     for i in range(n):
@@ -164,6 +163,7 @@ def diff_matrix(imdict):
         fig.colorbar(im,ax=axs[i,i], fraction=0.046)
     for ii in range(n):
         plotrowdiffs(fig, ii, imarray, axs, n)
-
+    if title is not None:
+        fig.suptitle(title, fontsize=16)
     plt.tight_layout()
     plt.show()
