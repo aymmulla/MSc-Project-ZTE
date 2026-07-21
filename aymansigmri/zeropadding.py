@@ -54,3 +54,35 @@ def rebuild(output_kspace, inner_mask, inner_start, inner_end, enlarged_kspace, 
     recombined = jigsaw(output_kspace=output_kspace, isolation_mask = inner_mask, start=inner_start, end=inner_end, enlarged_kspace=enlarged_kspace)
     filled_ksp = zero_padding(recombined, resize_x, resize_y)
     return(filled_ksp)
+
+
+
+def zero_padding3d(cart_kspace,resize_x, resize_y, resize_z):
+    n_coils = cart_kspace.shape[0]
+    image_grid = sp.ifft(cart_kspace)
+    enlarged_image_grid = sp.resize(image_grid, [n_coils,resize_x, resize_y, resize_z])
+    enlarged_cartesian_kspace = sp.fft(enlarged_image_grid, axes=(-2, -1))
+    return enlarged_cartesian_kspace
+
+def inner_portion3d(enlarged_kspace, inner_sidelen):
+    """Take an inner square of kspace to speed up the hankel loop
+
+        Args:
+            enlarged_kspace: Zero padded kspace in cartesian coordinates (n_coils, nx, ny)
+            inner_sidelen: Side legnth of the inner square, divided by 2 to find from central point outward
+
+        Returns:
+            isolated_kspace: Inner kspace array
+            isolation_mask: Mask of the inner region to use when 'jigsawing' the transformed array back in
+            Start: xy index of the enlarged array that the inner region starts at
+            End: xy index of the enlarged array that the inner region ends at
+    """
+    cx, cy, cz = enlarged_kspace.shape[1] // 2, enlarged_kspace.shape[2] // 2, enlarged_kspace.shape[3] // 2
+    N = inner_sidelen/2
+    start, end = int(cx-N), int(cx+N)
+    isolation_mask = np.ones(enlarged_kspace.shape[1:], dtype=int)
+    isolation_mask[start:end, start:end, start:end] = 0
+    isolated_kspace = enlarged_kspace[:, start:end, start:end, start:end]
+    
+    return(isolated_kspace, isolation_mask, start, end)
+

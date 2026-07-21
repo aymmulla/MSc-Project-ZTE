@@ -27,7 +27,10 @@ from .zeropadding import(
     jigsaw,
     inner_portion,
     zero_padding,
-    rebuild
+    rebuild,
+    inner_portion3d,
+    zero_padding3d
+
 )
 
 from .loraks_svd import(
