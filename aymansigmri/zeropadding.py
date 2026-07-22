@@ -86,3 +86,20 @@ def inner_portion3d(enlarged_kspace, inner_sidelen):
     
     return(isolated_kspace, isolation_mask, start, end)
 
+def jigsaw3d(output_kspace, isolation_mask, start, end, enlarged_kspace):
+    ### NOTE: There is a better way to do this without using start and end
+    """Put the transormed region of kspace back into the zero padded region
+        Args:
+            output_kspace: Transformed SVD thresh kspace region
+            isolation_mask: Mask of the inner region; typically output of asm.inner_portion
+            Start: xy index of the enlarged array that the inner region starts at; typically output of asm.inner_portion 
+            End: xy index of the enlarged array that the inner region ends at; typically output of asm.inner_portion
+            enlarged_kspace: Zero padded kspace in cartesian coordinates (n_coils, nx, ny)
+
+        Returns:
+            recombined: Zero padded kspace with transfomed inner region 'jigsawed' back in
+    """
+    processed_isolated_kspace = output_kspace.copy()
+    recombined = enlarged_kspace * isolation_mask ### NOTE: Need to improve this
+    recombined[:, start:end, start:end, start:end] = processed_isolated_kspace
+    return(recombined)
