@@ -41,7 +41,9 @@ from .loraks_svd import(
     svd_recon,
     LORAKS_loop,
     softimpute_ALS,
-    LORAKS_imputeals
+    LORAKS_imputeals,
+    LORAKS_imputeals_ortho,
+    softimpute_ALS_ortho
 )
 
 from .gridding_hankel import(

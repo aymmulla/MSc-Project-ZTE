@@ -4,6 +4,7 @@ import sigpy as sp
 import jax as jx
 import time
 from . import gridding_hankel
+from . import zeropadding
 
 
 def sig_val_thresholding_jax_soft(data, zero_thresh):
@@ -40,17 +41,17 @@ def svd_recon(u, s_reduced, vh):
     return ((u*s_reduced) @ vh)
 
 
-def LORAKS_loop(n_iters, window_size, zero_thresh, cartesian_inputkspace, dtg_mask):
+def LORAKS_loop(n_iters, window_size, zero_thresh, cartesian_inputkspace, dtg_mask, stride, im_dim, enlarged_kspace, inner_mask, inner_start, inner_end):
     ksp_forhankel = cartesian_inputkspace.copy()
     iter_count = 0
     deltas = []
     k_prev = None
     while iter_count < n_iters:
-        hankel_matrix, n_coils, Numx, Numy = gridding_hankel.hankel(kspace=ksp_forhankel, w=window_size)
+        hankel_matrix, n_coils, Numx, Numy = gridding_hankel.hankel_2(kspace=ksp_forhankel, w=window_size, s = stride)
         U, S_reduced, Vh = sig_val_thresholding_jax(data=hankel_matrix, zero_thresh=zero_thresh)
         data_recon = (U * S_reduced) @ Vh
 
-        kspace_cart_coils_recon = gridding_hankel.hankel_H_averaged(data_recon, n_coils=ksp_forhankel.shape[0], Nx=ksp_forhankel.shape[1], Ny=ksp_forhankel.shape[2], w=window_size)
+        kspace_cart_coils_recon = gridding_hankel.hankel_H_averaged_2(data_recon, n_coils=ksp_forhankel.shape[0], Nx=ksp_forhankel.shape[1], Ny=ksp_forhankel.shape[2], w=window_size, s=stride)
         kspace_cart_coils_consistent = kspace_cart_coils_recon.copy()
 
         for coil in range(ksp_forhankel.shape[0]):
@@ -65,7 +66,12 @@ def LORAKS_loop(n_iters, window_size, zero_thresh, cartesian_inputkspace, dtg_ma
         iter_count += 1
 
     output_kspace = ksp_forhankel.copy()
-    return(output_kspace, deltas)
+    filled_ksp = zeropadding.rebuild(output_kspace=output_kspace, inner_mask = inner_mask, inner_start = inner_start, inner_end = inner_end, enlarged_kspace=enlarged_kspace, resize_x = im_dim, resize_y = im_dim)
+    im_grid0 = sp.ifft(filled_ksp, axes=(-2, -1))
+    im_0 = np.sum(np.abs(im_grid0)**2, axis=0)**0.5
+
+    output_kspace = ksp_forhankel.copy()
+    return(output_kspace, im_0 ,deltas)
 
 
 
@@ -121,22 +127,6 @@ def softimpute_ALS(X_H, M_H, rank, lamda, n_iters):
 
     return (ABt, t_total, t_mean, iter_times)
 
-def LORAKS_imputeals(n_iters, window_size, cartesian_inputkspace, dtg_mask, rank, lamda, stride):
-    ksp_forhankel = cartesian_inputkspace.copy()
-    ksp_zerod = ksp_forhankel * dtg_mask
-    hankel_matrix, n_coils, Numx, Numy = gridding_hankel.hankel_2(kspace=ksp_zerod, w=window_size, s=stride)
-    mask_coiled = np.broadcast_to(dtg_mask, (cartesian_inputkspace.shape))
-    masked_hankel, *_ = gridding_hankel.hankel(mask_coiled, window_size)
-    masked_hankel = np.real(masked_hankel) > 0.5
-    
-    
-    filled_hankel, total_times, mean_time, iteration_times = softimpute_ALS(X_H = hankel_matrix, M_H = masked_hankel, rank = rank, lamda = lamda, n_iters=n_iters)
-
-    kspace_cart_coils_recon = gridding_hankel.hankel_H_averaged_2(filled_hankel, n_coils=ksp_forhankel.shape[0], Nx=ksp_forhankel.shape[1], Ny=ksp_forhankel.shape[2], w=window_size, s=stride)
-    kspace_cart_coils_recon = np.where(dtg_mask, cartesian_inputkspace, kspace_cart_coils_recon)
-    output_kspace = kspace_cart_coils_recon.copy()
-
-    return output_kspace
 
 
 def softimpute_ALS_ortho(X_H, M_H, rank, lamda, n_iters, seed):
@@ -164,3 +154,44 @@ def softimpute_ALS_ortho(X_H, M_H, rank, lamda, n_iters, seed):
             ABt = A @ B.conj().T
             iter_count += 1
         return(ABt)
+
+
+def LORAKS_imputeals(n_iters, window_size, cartesian_inputkspace, dtg_mask, rank, lamda, stride):
+    ksp_forhankel = cartesian_inputkspace.copy()
+    ksp_zerod = ksp_forhankel * dtg_mask
+    hankel_matrix, n_coils, Numx, Numy = gridding_hankel.hankel_2(kspace=ksp_zerod, w=window_size, s=stride)
+    mask_coiled = np.broadcast_to(dtg_mask, (cartesian_inputkspace.shape))
+    masked_hankel, *_ = gridding_hankel.hankel(mask_coiled, window_size)
+    masked_hankel = np.real(masked_hankel) > 0.5
+    
+    
+    filled_hankel, *_ = softimpute_ALS_ortho(X_H = hankel_matrix, M_H = masked_hankel, rank = rank, lamda = lamda, n_iters=n_iters)
+
+    kspace_cart_coils_recon = gridding_hankel.hankel_H_averaged_2(filled_hankel, n_coils=ksp_forhankel.shape[0], Nx=ksp_forhankel.shape[1], Ny=ksp_forhankel.shape[2], w=window_size, s=stride)
+    kspace_cart_coils_recon = np.where(dtg_mask, cartesian_inputkspace, kspace_cart_coils_recon)
+    output_kspace = kspace_cart_coils_recon.copy()
+
+    return output_kspace
+
+
+
+
+def LORAKS_imputeals_ortho(n_iters, window_size, cartesian_inputkspace, dtg_mask, rank, lamda, stride, im_dim, enlarged_kspace, seed, inner_mask, inner_start, inner_end):
+    ksp_forhankel = cartesian_inputkspace.copy()
+    ksp_zerod = ksp_forhankel * dtg_mask
+    hankel_matrix, n_coils, Numx, Numy = gridding_hankel.hankel_2(kspace=ksp_zerod, w=window_size, s=stride)
+    mask_coiled = np.broadcast_to(dtg_mask, (cartesian_inputkspace.shape))
+    masked_hankel, *_ = gridding_hankel.hankel_2(kspace=mask_coiled, w=window_size, s=stride)
+    masked_hankel = np.real(masked_hankel) > 0.5
+    
+    
+    filled_hankel = softimpute_ALS_ortho(X_H = hankel_matrix, M_H = masked_hankel, rank = rank, lamda = lamda, n_iters=n_iters,seed=seed)
+
+    kspace_cart_coils_recon = gridding_hankel.hankel_H_averaged_2(filled_hankel, n_coils=ksp_forhankel.shape[0], Nx=ksp_forhankel.shape[1], Ny=ksp_forhankel.shape[2], w=window_size, s=stride)
+    kspace_cart_coils_recon = np.where(dtg_mask, cartesian_inputkspace, kspace_cart_coils_recon)
+    output_kspace = kspace_cart_coils_recon.copy()
+    filled_ksp = zeropadding.rebuild(output_kspace=output_kspace, inner_mask = inner_mask, inner_start = inner_start, inner_end = inner_end, enlarged_kspace=enlarged_kspace, resize_x = im_dim, resize_y = im_dim)
+    im_grid0 = sp.ifft(filled_ksp, axes=(-2, -1))
+    im_0 = np.sum(np.abs(im_grid0)**2, axis=0)**0.5
+
+    return (filled_ksp, im_0, masked_hankel)
