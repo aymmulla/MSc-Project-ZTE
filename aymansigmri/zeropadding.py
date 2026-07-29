@@ -45,14 +45,16 @@ def jigsaw(output_kspace, isolation_mask, start, end, enlarged_kspace):
         Returns:
             recombined: Zero padded kspace with transfomed inner region 'jigsawed' back in
     """
-    processed_isolated_kspace = output_kspace.copy()
-    recombined = enlarged_kspace * isolation_mask ### NOTE: Need to improve this
-    recombined[:, start:end, start:end] = processed_isolated_kspace
+    #processed_isolated_kspace = output_kspace.copy()
+    #recombined = enlarged_kspace * isolation_mask ### NOTE: Need to improve this
+    recombined = enlarged_kspace.copy()
+    recombined[~isolation_mask] = 0
+    recombined[:, start:end, start:end] = output_kspace
     return(recombined)
 
-def rebuild(output_kspace, inner_mask, inner_start, inner_end, enlarged_kspace, resize_x, resize_y):
+def rebuild(output_kspace, inner_mask, inner_start, inner_end, enlarged_kspace, im_dim):
     recombined = jigsaw(output_kspace=output_kspace, isolation_mask = inner_mask, start=inner_start, end=inner_end, enlarged_kspace=enlarged_kspace)
-    filled_ksp = zero_padding(recombined, resize_x, resize_y)
+    filled_ksp = zero_padding(recombined, im_dim, im_dim)
     return(filled_ksp)
 
 
@@ -61,7 +63,7 @@ def zero_padding3d(cart_kspace,resize_x, resize_y, resize_z):
     n_coils = cart_kspace.shape[0]
     image_grid = sp.ifft(cart_kspace)
     enlarged_image_grid = sp.resize(image_grid, [n_coils,resize_x, resize_y, resize_z])
-    enlarged_cartesian_kspace = sp.fft(enlarged_image_grid, axes=(-2, -1))
+    enlarged_cartesian_kspace = sp.fft(enlarged_image_grid, axes=(-3,-2, -1))
     return enlarged_cartesian_kspace
 
 def inner_portion3d(enlarged_kspace, inner_sidelen):
@@ -99,7 +101,18 @@ def jigsaw3d(output_kspace, isolation_mask, start, end, enlarged_kspace):
         Returns:
             recombined: Zero padded kspace with transfomed inner region 'jigsawed' back in
     """
-    processed_isolated_kspace = output_kspace.copy()
-    recombined = enlarged_kspace * isolation_mask ### NOTE: Need to improve this
-    recombined[:, start:end, start:end, start:end] = processed_isolated_kspace
+    #processed_isolated_kspace = output_kspace.copy()
+    #recombined = enlarged_kspace * isolation_mask ### NOTE: Need to improve this
+    #recombined[:, start:end, start:end, start:end] = output_kspace
+
+
+    recombined = enlarged_kspace.copy()
+    recombined[~isolation_mask] = 0
+    recombined[:, start:end, start:end, start:end] = output_kspace
+
     return(recombined)
+
+def rebuild3d(output_kspace, inner_mask, inner_start, inner_end, enlarged_kspace, im_dim):
+    recombined = jigsaw3d(output_kspace=output_kspace, isolation_mask = inner_mask, start=inner_start, end=inner_end, enlarged_kspace=enlarged_kspace)
+    filled_ksp = zero_padding3d(recombined, im_dim, im_dim,im_dim)
+    return(filled_ksp)

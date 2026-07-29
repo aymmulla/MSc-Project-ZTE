@@ -30,7 +30,8 @@ from .zeropadding import(
     rebuild,
     inner_portion3d,
     zero_padding3d,
-    jigsaw3d
+    jigsaw3d,
+    rebuild3d
 
 )
 
