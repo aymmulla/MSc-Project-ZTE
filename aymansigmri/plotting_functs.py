@@ -167,3 +167,31 @@ def diff_matrix(imdict, title=None):
         fig.suptitle(title, fontsize=16)
     plt.tight_layout()
     plt.show()
+
+
+def plot_planes(data, title, savefig=None, inputtype_kspace=True):
+    if inputtype_kspace:
+        im_grid = sp.ifft(data)
+        print('fft done')
+    else: 
+        im_grid = data
+    rss = np.sum(np.abs(im_grid)**2, axis=0)**0.5
+
+    nx, ny, nz = rss.shape
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    fig.suptitle(title, fontsize=14)
+
+    for ax, (sl, sl_title) in zip(axes, [
+        (rss[nx // 2, :, :], 'x mid-slice'),
+        (rss[:, ny // 2, :], 'y mid-slice'),
+        (rss[:, :, nz // 2], 'z mid-slice'),
+    ]):
+        img = ax.imshow(np.abs(sl), cmap='gray')
+        ax.set_title(sl_title)
+        ax.axis('off')
+        fig.colorbar(img, ax=ax, fraction=0.046)
+
+    plt.tight_layout()
+    if savefig is not None:
+        fig.savefig(savefig, dpi=300, bbox_inches='tight')
+    plt.show()

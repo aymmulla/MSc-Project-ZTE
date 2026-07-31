@@ -20,7 +20,8 @@ from .plotting_functs import(
     plot_mask,
     im_recon_zte,
     im_recon_cart,
-    diff_matrix
+    diff_matrix,
+    plot_planes
 )
 
 from .zeropadding import(
@@ -58,3 +59,6 @@ from .gridding_hankel import(
     hankel_H_averaged_2
 )
 
+from .rieslingfuncts import(
+    h5tonum
+)

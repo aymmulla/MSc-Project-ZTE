@@ -32,7 +32,7 @@ def inner_portion(enlarged_kspace, inner_sidelen):
     
     return(isolated_kspace, isolation_mask, start, end)
 
-def jigsaw(output_kspace, isolation_mask, start, end, enlarged_kspace):
+def jigsaw(output_kspace, start, end, enlarged_kspace):
     ### NOTE: There is a better way to do this without using start and end
     """Put the transormed region of kspace back into the zero padded region
         Args:
@@ -48,7 +48,6 @@ def jigsaw(output_kspace, isolation_mask, start, end, enlarged_kspace):
     #processed_isolated_kspace = output_kspace.copy()
     #recombined = enlarged_kspace * isolation_mask ### NOTE: Need to improve this
     recombined = enlarged_kspace.copy()
-    recombined[~isolation_mask] = 0
     recombined[:, start:end, start:end] = output_kspace
     return(recombined)
 
@@ -104,13 +103,8 @@ def jigsaw3d(output_kspace, isolation_mask, start, end, enlarged_kspace):
     #processed_isolated_kspace = output_kspace.copy()
     #recombined = enlarged_kspace * isolation_mask ### NOTE: Need to improve this
     #recombined[:, start:end, start:end, start:end] = output_kspace
-
-
-    recombined = enlarged_kspace.copy()
-    recombined[~isolation_mask] = 0
-    recombined[:, start:end, start:end, start:end] = output_kspace
-
-    return(recombined)
+    enlarged_kspace[:, start:end, start:end, start:end] = output_kspace
+    return(enlarged_kspace)
 
 def rebuild3d(output_kspace, inner_mask, inner_start, inner_end, enlarged_kspace, im_dim):
     recombined = jigsaw3d(output_kspace=output_kspace, isolation_mask = inner_mask, start=inner_start, end=inner_end, enlarged_kspace=enlarged_kspace)
