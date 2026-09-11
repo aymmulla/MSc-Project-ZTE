@@ -76,9 +76,13 @@ def plot_result(initial_cart, post_cart, initial_zerop, post_zerop, lamda, rank)
     plt.show()
 
 
-def plot_mask(isolated_kspace, mask, zte_radial_coords, zte_radial_kspace, innersidelen, sidelencart, sidelenrad):
+def plot_mask(isolated_kspace, mask, zte_radial_coords, zte_radial_kspace, innersidelen, sidelencart, sidelenrad, n, eps=0.3):
     
     all_coords = zte_radial_coords.reshape(-1, 2)
+
+    # radius of the dead-time gap = distance of the nth point along a spoke from origin
+    gap_radius_rad = np.linalg.norm(zte_radial_coords[0, n-1]) + eps
+    gap_radius_cart = 2 * np.linalg.norm(zte_radial_coords[0, n-1]) + eps
 
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(30, 8))
     
@@ -94,11 +98,14 @@ def plot_mask(isolated_kspace, mask, zte_radial_coords, zte_radial_kspace, inner
     ax[0].grid(visible=True, which='minor', linewidth=1)
     ax[0].xaxis.set_major_locator(plt.MultipleLocator(1))
     ax[0].yaxis.set_major_locator(plt.MultipleLocator(1))
-
+    ax[0].add_patch(plt.Circle((innersidelen/2, innersidelen/2), gap_radius_cart,
+                               fill=False, ec='red', lw=4, ls='--', zorder=10, label='Dead-time gap'))
+    ax[0].legend()
 
     yy, xx = np.mgrid[0:mask.shape[0], 0:mask.shape[0]]
-    im1 = ax[1].scatter(xx.ravel(), yy.ravel(), c=mask.ravel().astype(int), cmap='viridis', s=300, marker='s', zorder=3)
-    fig.colorbar(im1, ax=ax[1], label='mask')
+    mask_flat = mask.ravel().astype(bool)
+    ax[1].scatter(xx.ravel()[mask_flat], yy.ravel()[mask_flat], c='yellow', s=300, marker='s', zorder=3, label='mask True')
+    ax[1].scatter(xx.ravel()[~mask_flat], yy.ravel()[~mask_flat], c='purple', s=300, marker='s', zorder=3, label='mask False')
     ax[1].set_title('Centre mask')
     ax[1].set_xlabel('x')
     ax[1].set_ylabel('y')
@@ -110,6 +117,9 @@ def plot_mask(isolated_kspace, mask, zte_radial_coords, zte_radial_kspace, inner
     ax[1].grid(visible=True, which='minor', linewidth=1)
     ax[1].xaxis.set_major_locator(plt.MultipleLocator(1))
     ax[1].yaxis.set_major_locator(plt.MultipleLocator(1))
+    ax[1].add_patch(plt.Circle((innersidelen/2, innersidelen/2), gap_radius_cart,
+                               fill=False, ec='red', lw=4, ls='--', zorder=10, label='Dead-time gap'))
+    ax[1].legend()
 
     im2 = ax[2].scatter(all_coords[:, 0],all_coords[:, 1], c=np.abs(zte_radial_kspace[1]), cmap='viridis')
     fig.colorbar(im2, ax=ax[2], label='kspace value')
@@ -124,6 +134,9 @@ def plot_mask(isolated_kspace, mask, zte_radial_coords, zte_radial_kspace, inner
     ax[2].yaxis.set_major_locator(plt.MultipleLocator(1))
     ax[2].set_xlim(0 - (sidelenrad//2), 0 + (sidelenrad//2))
     ax[2].set_ylim(0 - sidelenrad//2, 0 + (sidelenrad//2))
+    ax[2].add_patch(plt.Circle((0, 0), gap_radius_rad,
+                               fill=False, ec='red', lw=4, ls='--', zorder=10, label='Dead-time gap'))
+    ax[2].legend()
 
     plt.show()
 
@@ -140,34 +153,52 @@ def im_recon_cart(kspace):
     pl.ImagePlot(im_rss_recon)
 
 
-def plotdiff(fig, index1, index2, imagearr, axname, numims, cmap='RdBu_r'):
-    if not index2>numims-1:
-        diff = (np.abs(np.abs(imagearr[index1]) - np.abs(imagearr[index2])))/ np.max(np.abs(imagearr[index1]))
+def plotdiff(fig, index1, index2, imagearr, axname, numims, cmap='RdBu_r', fontsize=18, colorbar=True):
+    if not index2 > numims-1:
+        diff = (np.abs(np.abs(imagearr[index1]) - np.abs(imagearr[index2]))) / np.max(np.abs(imagearr[index1]))
         diff_plot = axname[index1, index2].imshow(diff, cmap)
-        fig.colorbar(diff_plot, ax=axname[index1, index2], fraction=0.046, format='{x:.1%}')
-    
-def plotrowdiffs(fig, rownum, imagearr, axname, numims):
+        cb = fig.colorbar(diff_plot, ax=axname[index1, index2], fraction=0.046, format='{x:.1%}')
+        if colorbar:
+            cb.ax.tick_params(labelsize=fontsize)
+        else:
+            cb.ax.set_visible(False)
+
+def plotrowdiffs(fig, rownum, imagearr, axname, numims, fontsize=18, colorbar=True):
     for jj in range(numims):
         if not rownum == rownum+jj:
-            plotdiff(fig,rownum, rownum+jj,imagearr, axname, numims)
+            plotdiff(fig, rownum, rownum+jj, imagearr, axname, numims, fontsize=fontsize, colorbar=colorbar)
 
-def diff_matrix(imdict, title=None):
+def diff_matrix(imdict, title=None, fontsize=18, savepath=None, vmax=None,
+                im_colorbar=True, diff_colorbar=True):
     titles, imarray = list(imdict.keys()), list(imdict.values())
     n = len(imarray)
-    fig, axs = plt.subplots(n, n, figsize=(4*n, 4*n))
+    fig, axs = plt.subplots(n, n, figsize=(4*n, 3.2*n))
     for i in range(n):
         for j in range(n):
             axs[i, j].axis('off')
-        im = axs[i,i].imshow(np.abs(imarray[i]), cmap='gray')
-        axs[i, i].set_title(f'{titles[i]}')
-        fig.colorbar(im,ax=axs[i,i], fraction=0.046)
+        im = axs[i, i].imshow(np.abs(imarray[i]), cmap='gray', vmax=vmax)
+        cb = fig.colorbar(im, ax=axs[i, i], fraction=0.046)
+        if im_colorbar:
+            cb.ax.tick_params(labelsize=fontsize)
+        else:
+            cb.ax.set_visible(False)
     for ii in range(n):
-        plotrowdiffs(fig, ii, imarray, axs, n)
+        plotrowdiffs(fig, ii, imarray, axs, n, fontsize=fontsize, colorbar=diff_colorbar)
     if title is not None:
-        fig.suptitle(title, fontsize=16)
-    plt.tight_layout()
-    plt.show()
+        fig.suptitle(title, fontsize=plt.rcParams['figure.titlesize'])
 
+    fig.subplots_adjust(left=0.06, right=0.98, top=0.98, bottom=0.02,
+                        wspace=0.32, hspace=0)
+
+    for i in range(n):
+        pos = axs[i, i].get_position()
+        ycenter = pos.y0 + pos.height / 2
+        fig.text(0.02, ycenter, f'{titles[i]}', fontsize=fontsize,
+                 rotation=90, va='center', ha='center')
+
+    if savepath is not None:
+        fig.savefig(savepath, dpi=300, bbox_inches='tight')
+    plt.show()
 
 def plot_planes(data, title, savefig=None, inputtype_kspace=True):
     if inputtype_kspace:
@@ -194,4 +225,85 @@ def plot_planes(data, title, savefig=None, inputtype_kspace=True):
     plt.tight_layout()
     if savefig is not None:
         fig.savefig(savefig, dpi=300, bbox_inches='tight')
+    plt.show()
+
+
+
+def plotdiff2(fig, index1, index2, imagearr, axname, numims, cmap='RdBu_r',
+             diff_vmax=None):
+    if index2 > numims-1 or index2 <= index1:
+        return None
+    diff = np.abs(np.abs(imagearr[index1]) - np.abs(imagearr[index2])) / np.max(np.abs(imagearr[index1]))
+    return axname[index1, index2].imshow(diff, cmap, vmin=0, vmax=diff_vmax)
+
+def plotrowdiffs2(fig, rownum, imagearr, axname, numims, diff_vmax=None):
+    mappable = None
+    for jj in range(numims):
+        m = plotdiff2(fig, rownum, rownum+jj, imagearr, axname, numims, diff_vmax=diff_vmax)
+        if m is not None:
+            mappable = m
+    return mappable
+
+def diff_matrix2(imdict, title=None, fontsize=18, savepath=None,
+                gray_vmax=None, diff_vmax=None):
+    titles, imarray = list(imdict.keys()), list(imdict.values())
+    n = len(imarray)
+
+    if diff_vmax is None:
+        dmax = 0.0
+        for i in range(n):
+            for j in range(i+1, n):
+                d = np.abs(np.abs(imarray[i]) - np.abs(imarray[j])) / np.max(np.abs(imarray[i]))
+                dmax = max(dmax, float(np.nanmax(d)))
+        diff_vmax = dmax
+
+    if gray_vmax is None:
+        gray_vmax = max(float(np.nanmax(np.abs(im))) for im in imarray)
+
+    fig, axs = plt.subplots(n, n, figsize=(4*n, 3.2*n))
+    for i in range(n):
+        for j in range(n):
+            axs[i, j].axis('off')
+
+    diff_mappable = None
+    for ii in range(n):
+        m = plotrowdiffs2(fig, ii, imarray, axs, n, diff_vmax=diff_vmax)
+        if m is not None:
+            diff_mappable = m
+
+    gray_mappable = None
+    for i in range(n):
+        gray_mappable = axs[i, i].imshow(np.abs(imarray[i]), cmap='gray', vmin=0, vmax=gray_vmax)
+
+    if title is not None:
+        fig.suptitle(title, fontsize=plt.rcParams['figure.titlesize'])
+
+    fig.subplots_adjust(left=0.06, right=0.86, top=0.98, bottom=0.02,
+                        wspace=0.1, hspace=0.1)
+
+
+
+    cbar_bottom = 0.02
+    cbar_height = 0.96  # 0.98 - 0.02
+
+    cax_gray = fig.add_axes([0.885, cbar_bottom, 0.015, cbar_height])
+    cbar_gray = fig.colorbar(gray_mappable, cax=cax_gray)
+    cbar_gray.ax.tick_params(labelsize=fontsize)
+
+    cax_diff = fig.add_axes([0.965, cbar_bottom, 0.015, cbar_height])
+    cbar_diff = fig.colorbar(diff_mappable, cax=cax_diff, format='{x:.1%}')
+    cbar_diff.ax.tick_params(labelsize=fontsize)
+
+    #cbar_gray.set_label('Magnitude', fontsize=fontsize)
+    #cbar_diff.set_label('Difference', fontsize=fontsize)
+
+    x_title = axs[0, 0].get_position().x0 - 0.01
+    for i in range(n):
+        pos = axs[i, i].get_position()
+        ycenter = pos.y0 + pos.height / 2
+        fig.text(x_title, ycenter, rf'{titles[i]}', fontsize=fontsize,
+                 rotation=90, va='center', ha='center')
+
+    if savepath is not None:
+        fig.savefig(savepath, dpi=300, bbox_inches='tight')
     plt.show()

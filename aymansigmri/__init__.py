@@ -21,7 +21,8 @@ from .plotting_functs import(
     im_recon_zte,
     im_recon_cart,
     diff_matrix,
-    plot_planes
+    plot_planes,
+    diff_matrix2
 )
 
 from .zeropadding import(

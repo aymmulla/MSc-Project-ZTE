@@ -41,7 +41,7 @@ def svd_recon(u, s_reduced, vh):
     return ((u*s_reduced) @ vh)
 
 
-def LORAKS_loop(n_iters, window_size, zero_thresh, cartesian_inputkspace, dtg_mask, stride, im_dim, enlarged_kspace, inner_mask, inner_start, inner_end):
+def LORAKS_loop(n_iters, window_size, zero_thresh, cartesian_inputkspace, dtg_mask, stride, im_dim, enlarged_kspace, inner_start, inner_end):
     ksp_forhankel = cartesian_inputkspace.copy()
     iter_count = 0
     deltas = []
@@ -66,7 +66,7 @@ def LORAKS_loop(n_iters, window_size, zero_thresh, cartesian_inputkspace, dtg_ma
         iter_count += 1
 
     output_kspace = ksp_forhankel.copy()
-    filled_ksp = zeropadding.rebuild(output_kspace=output_kspace, inner_mask = inner_mask, inner_start = inner_start, inner_end = inner_end, enlarged_kspace=enlarged_kspace, resize_x = im_dim, resize_y = im_dim)
+    filled_ksp = zeropadding.rebuild(output_kspace=output_kspace, inner_start = inner_start, inner_end = inner_end, enlarged_kspace=enlarged_kspace, resize_x = im_dim, resize_y = im_dim)
     im_grid0 = sp.ifft(filled_ksp, axes=(-2, -1))
     im_0 = np.sum(np.abs(im_grid0)**2, axis=0)**0.5
 
@@ -153,7 +153,7 @@ def LORAKS_imputeals(n_iters, window_size, cartesian_inputkspace, dtg_mask, rank
 
 
 
-def LORAKS_imputeals_ortho(n_iters, window_size, cartesian_inputkspace, dtg_mask, rank, lamda, stride, im_dim, enlarged_kspace, seed, inner_mask, inner_start, inner_end):
+def LORAKS_imputeals_ortho(n_iters, window_size, cartesian_inputkspace, dtg_mask, rank, lamda, stride, im_dim, enlarged_kspace, seed, inner_start, inner_end):
     ksp_forhankel = cartesian_inputkspace.copy()
     ksp_zerod = ksp_forhankel * dtg_mask
     hankel_matrix, n_coils, Numx, Numy = gridding_hankel.hankel_2(kspace=ksp_zerod, w=window_size, s=stride)
@@ -167,8 +167,8 @@ def LORAKS_imputeals_ortho(n_iters, window_size, cartesian_inputkspace, dtg_mask
     kspace_cart_coils_recon = gridding_hankel.hankel_H_averaged_2(filled_hankel, n_coils=ksp_forhankel.shape[0], Nx=ksp_forhankel.shape[1], Ny=ksp_forhankel.shape[2], w=window_size, s=stride)
     kspace_cart_coils_recon = np.where(dtg_mask, cartesian_inputkspace, kspace_cart_coils_recon)
     output_kspace = kspace_cart_coils_recon.copy()
-    filled_ksp = zeropadding.rebuild(output_kspace=output_kspace, inner_mask = inner_mask, inner_start = inner_start, inner_end = inner_end, enlarged_kspace=enlarged_kspace, resize_x = im_dim, resize_y = im_dim)
+    filled_ksp, jigsaw_ksp = zeropadding.rebuild(output_kspace=output_kspace, inner_start = inner_start, inner_end = inner_end, enlarged_kspace=enlarged_kspace, im_dim = im_dim)
     im_grid0 = sp.ifft(filled_ksp, axes=(-2, -1))
     im_0 = np.sum(np.abs(im_grid0)**2, axis=0)**0.5
 
-    return (filled_ksp, im_0, masked_hankel)
+    return (filled_ksp, im_0, jigsaw_ksp)

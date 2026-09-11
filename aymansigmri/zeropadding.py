@@ -30,7 +30,7 @@ def inner_portion(enlarged_kspace, inner_sidelen):
     isolation_mask[start:end, start:end] = 0
     isolated_kspace = enlarged_kspace[:, start:end, start:end]
     
-    return(isolated_kspace, isolation_mask, start, end)
+    return(isolated_kspace, start, end)
 
 def jigsaw(output_kspace, start, end, enlarged_kspace):
     ### NOTE: There is a better way to do this without using start and end
@@ -51,10 +51,10 @@ def jigsaw(output_kspace, start, end, enlarged_kspace):
     recombined[:, start:end, start:end] = output_kspace
     return(recombined)
 
-def rebuild(output_kspace, inner_mask, inner_start, inner_end, enlarged_kspace, im_dim):
-    recombined = jigsaw(output_kspace=output_kspace, isolation_mask = inner_mask, start=inner_start, end=inner_end, enlarged_kspace=enlarged_kspace)
+def rebuild(output_kspace, inner_start, inner_end, enlarged_kspace, im_dim):
+    recombined = jigsaw(output_kspace=output_kspace, start=inner_start, end=inner_end, enlarged_kspace=enlarged_kspace)
     filled_ksp = zero_padding(recombined, im_dim, im_dim)
-    return(filled_ksp)
+    return(filled_ksp, recombined)
 
 
 
