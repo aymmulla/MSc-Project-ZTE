@@ -1,5 +1,7 @@
 import sigpy as sp
 import numpy as np
+from . import gridding_hankel
+from . import zeropadding
 
 
 #First 4 funtions used to get toy ZTE style data
@@ -155,3 +157,15 @@ def generate_zte_data_trial(ksp, coord,n_missing,undersampling_factor=1):
     acquired_mask[:, :n_missing] = False
 
     return ksp_new, coord_new, ksp_full, coord_full, acquired_mask, ksp_groundtruth, n_points_full
+
+def circular_gap_mask(inner_wid, r, verbose=True):
+    cy, cx = inner_wid // 2, inner_wid // 2
+    yy, xx = np.ogrid[:inner_wid, :inner_wid]
+
+    mask = (yy - cy)**2 + (xx - cx)**2 > r**2 + 2
+
+    n_masked = np.count_nonzero(~mask)
+    if verbose:
+        print(f"r = {r}: {n_masked} points masked out")
+
+    return mask

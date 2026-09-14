@@ -13,6 +13,7 @@ from .zte_functs import(
     data_consistency,
     cartesian_data_consistency,
     generate_zte_data_trial,
+    circular_gap_mask
 )
 
 from .plotting_functs import(
@@ -43,21 +44,19 @@ from .loraks_svd import(
     sig_val_thresholding_jax_soft,
     svd_recon,
     LORAKS_loop,
-    softimpute_ALS,
-    LORAKS_imputeals,
     LORAKS_imputeals_ortho,
     softimpute_ALS_ortho
 )
 
 from .gridding_hankel import(
-    gridding_operator,
-    gridding_operator_H,
     nufft_gridding,
     nufft_degridding,
     hankel,
     hankel_H_averaged,
     hankel_2,
-    hankel_H_averaged_2
+    hankel_H_averaged_2,
+    lift,
+    unlift
 )
 
 from .rieslingfuncts import(
