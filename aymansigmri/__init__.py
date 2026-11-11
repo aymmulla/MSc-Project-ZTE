@@ -60,5 +60,6 @@ from .gridding_hankel import(
 )
 
 from .rieslingfuncts import(
-    h5tonum
+    h5tonum,
+    h5tonum_interleaved
 )

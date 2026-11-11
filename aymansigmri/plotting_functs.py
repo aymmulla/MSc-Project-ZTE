@@ -140,11 +140,14 @@ def plot_mask(isolated_kspace, mask, zte_radial_coords, zte_radial_kspace, inner
 
     plt.show()
 
-def im_recon_zte(kspace, radial_coords):
+def im_recon_zte(kspace, radial_coords,display_im=True, returnoutput=False):
     dcf = (radial_coords[...,0]**2 + radial_coords[...,1]**2)**0.5
     im_grid = sp.nufft_adjoint(kspace* dcf, radial_coords)
     img_rss = np.sum(np.abs(im_grid)**2, axis=0)**0.5
-    pl.ImagePlot(img_rss)
+    if display_im:
+        pl.ImagePlot(img_rss)
+    if returnoutput:
+        return (img_rss)
 
 
 def im_recon_cart(kspace):
