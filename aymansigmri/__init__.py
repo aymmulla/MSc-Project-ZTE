@@ -23,7 +23,9 @@ from .plotting_functs import(
     im_recon_cart,
     diff_matrix,
     plot_planes,
-    diff_matrix2
+    diff_matrix2,
+    plot_sliceradial
+    
 )
 
 from .zeropadding import(
@@ -61,5 +63,6 @@ from .gridding_hankel import(
 
 from .rieslingfuncts import(
     h5tonum,
-    h5tonum_interleaved
+    h5tonum_interleaved,
+    interleaved_reshape
 )

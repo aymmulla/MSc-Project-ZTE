@@ -58,12 +58,45 @@ def rebuild(output_kspace, inner_start, inner_end, enlarged_kspace, im_dim):
 
 
 
-def zero_padding3d(cart_kspace,resize_x, resize_y, resize_z):
-    n_coils = cart_kspace.shape[0]
-    image_grid = sp.ifft(cart_kspace)
-    enlarged_image_grid = sp.resize(image_grid, [n_coils,resize_x, resize_y, resize_z])
-    enlarged_cartesian_kspace = sp.fft(enlarged_image_grid, axes=(-3,-2, -1))
-    return enlarged_cartesian_kspace
+
+def zeropadding3d(data, resize_factor, input_kspace=True, output_kspace=True):
+    """Zero pad of kspace
+    
+            Args:
+                data: Dataset in cartesian coordinates (n_coils, nx, ny)
+                im_dim: Requested output dimensions
+                input_kpsace: True if data is a kspace array
+                output_kpsace: True if wanting kspace output
+    
+            Returns:
+                Zeropadded data of requested domain
+        """
+    # NOTE: Give options to input and output kspace in order to save computation
+    n_coils = data.shape[0]
+    resizex = data.shape[1]*resize_factor
+    resizey = data.shape[2]*resize_factor
+    resizez = data.shape[3]*resize_factor
+
+    if not all(float(r).is_integer() for r in (resizex, resizey, resizez)):
+        print(f"Warning: non-integer resize dims: {resizex}, {resizey}, {resizez}")
+
+    resizex, resizey, resizez = int(resizex), int(resizey), int(resizez)
+    print('starting resize')
+    if input_kspace:
+        enlarged_image_grid = sp.resize(sp.ifft(data,axes=(-3, -2, -1)), [n_coils,resizex, resizey, resizez])
+        print('fft done input zp')
+    else:
+        enlarged_image_grid = sp.resize(data, [n_coils,resizex, resizey, resizez])
+    if output_kspace:
+        enlarged_cartesian_kspace = sp.fft(enlarged_image_grid, axes=(-3, -2, -1))
+        print('fft done output zp')
+        return enlarged_cartesian_kspace
+    else:
+        return enlarged_image_grid
+
+
+
+
 
 def inner_portion3d(enlarged_kspace, inner_sidelen):
     """Take an inner square of kspace to speed up the hankel loop

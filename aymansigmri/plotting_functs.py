@@ -310,3 +310,33 @@ def diff_matrix2(imdict, title=None, fontsize=18, savepath=None,
     if savepath is not None:
         fig.savefig(savepath, dpi=300, bbox_inches='tight')
     plt.show()
+
+
+def plot_sliceradial(kspace, trajectory, tol=0.5, radius = 10, coil = 1, title='Central Region of slice x = 0'):
+
+    coil = coil - 1
+    
+    cleaned_coords = trajectory.reshape(-1, 3)
+    cleaned_mag = np.abs(kspace[coil].reshape(-1))
+
+    fig, ax1 = plt.subplots(figsize=(8, 8))
+
+    mask_clean = (np.abs(cleaned_coords[:, 0]) < tol) \
+            & (np.abs(cleaned_coords[:, 1]) < radius) \
+            & (np.abs(cleaned_coords[:, 2]) < radius)
+
+    im1 = ax1.scatter(cleaned_coords[mask_clean, 1], cleaned_coords[mask_clean, 2], c=cleaned_mag[mask_clean],s=1)
+    ax1.set_title(f'{title}')
+    ax1.set_xlabel('ky')
+    ax1.set_ylabel('kz')
+    ax1.set_aspect('equal')
+    ax1.xaxis.set_major_locator(plt.MultipleLocator(1))
+    ax1.yaxis.set_major_locator(plt.MultipleLocator(1))
+    ax1.grid(visible=True, which='minor', linewidth=1)
+    ax1.xaxis.set_minor_locator(plt.MultipleLocator(1, offset=0.5))
+    ax1.yaxis.set_minor_locator(plt.MultipleLocator(1, offset=0.5))
+    ax1.set_xlim(-radius, radius)
+    ax1.set_ylim(-radius, radius)
+    fig.colorbar(im1, ax=ax1, label='k-space', shrink=0.8)
+
+    plt.show()
