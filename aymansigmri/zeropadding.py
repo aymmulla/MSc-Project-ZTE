@@ -58,15 +58,14 @@ def rebuild(output_kspace, inner_start, inner_end, enlarged_kspace, im_dim):
 
 
 
-
-def zeropadding3d(data, resize_factor, input_kspace=True, output_kspace=True):
+def zeropadding3d(data, resize_factor, inputtype_kspace=True, outputtype_kspace=True):
     """Zero pad of kspace
     
             Args:
                 data: Dataset in cartesian coordinates (n_coils, nx, ny)
                 im_dim: Requested output dimensions
-                input_kpsace: True if data is a kspace array
-                output_kpsace: True if wanting kspace output
+                inputtype_kspace: True if data is a kspace array
+                outputtype_kspace: True if wanting kspace output
     
             Returns:
                 Zeropadded data of requested domain
@@ -82,12 +81,12 @@ def zeropadding3d(data, resize_factor, input_kspace=True, output_kspace=True):
 
     resizex, resizey, resizez = int(resizex), int(resizey), int(resizez)
     print('starting resize')
-    if input_kspace:
+    if inputtype_kspace:
         enlarged_image_grid = sp.resize(sp.ifft(data,axes=(-3, -2, -1)), [n_coils,resizex, resizey, resizez])
         print('fft done input zp')
     else:
         enlarged_image_grid = sp.resize(data, [n_coils,resizex, resizey, resizez])
-    if output_kspace:
+    if outputtype_kspace:
         enlarged_cartesian_kspace = sp.fft(enlarged_image_grid, axes=(-3, -2, -1))
         print('fft done output zp')
         return enlarged_cartesian_kspace
@@ -95,10 +94,7 @@ def zeropadding3d(data, resize_factor, input_kspace=True, output_kspace=True):
         return enlarged_image_grid
 
 
-
-
-
-def inner_portion3d(enlarged_kspace, inner_sidelen):
+def inner_portion3dOLD(enlarged_kspace, inner_sidelen):
     """Take an inner square of kspace to speed up the hankel loop
 
         Args:
@@ -120,6 +116,34 @@ def inner_portion3d(enlarged_kspace, inner_sidelen):
     
     return(isolated_kspace, isolation_mask, start, end)
 
+
+def inner_portion3d(enlarged_kspace, inner_sidelen):
+    """Take an inner cube of kspace to speed up the hankel loop
+
+        Args:
+            enlarged_kspace: Zero padded kspace in cartesian coordinates (n_coils, nx, ny)
+            inner_sidelen: Side legnth of the inner square, divided by 2 to find from central point outward
+
+        Returns:
+            isolated_kspace: Inner kspace array
+            isolation_mask: Mask of the inner region to use when 'jigsawing' the transformed array back in
+            Start: xy index of the enlarged array that the inner region starts at
+            End: xy index of the enlarged array that the inner region ends at
+    """
+
+    cx, cy, cz = enlarged_kspace.shape[1] // 2, enlarged_kspace.shape[2] // 2, enlarged_kspace.shape[3] // 2
+    N = inner_sidelen/2
+    startx, endx = int(cx-N), int(cx+N)
+    starty, endy = int(cy-N), int(cy+N)
+    startz, endz = int(cz-N), int(cz+N)
+
+    isolation_mask = np.ones(enlarged_kspace.shape[1:], dtype=int)
+    isolation_mask[startx:endx, starty:endy, startz:endz] = 0
+    isolated_kspace = enlarged_kspace[:, startx:endx, starty:endy, startz:endz]
+    
+    return(isolated_kspace, (startx, starty, startz), (endx, endy, endz))
+
+
 def jigsaw3d(output_kspace, isolation_mask, start, end, enlarged_kspace):
     ### NOTE: There is a better way to do this without using start and end
     """Put the transormed region of kspace back into the zero padded region
@@ -139,7 +163,7 @@ def jigsaw3d(output_kspace, isolation_mask, start, end, enlarged_kspace):
     enlarged_kspace[:, start:end, start:end, start:end] = output_kspace
     return(enlarged_kspace)
 
-def rebuild3d(output_kspace, inner_mask, inner_start, inner_end, enlarged_kspace, im_dim):
+def rebuild3d(output_kspace, inner_mask, inner_start, inner_end, enlarged_kspace, resize_factor, inputtype_kspace=True, outputtype_kspace=False):
     recombined = jigsaw3d(output_kspace=output_kspace, isolation_mask = inner_mask, start=inner_start, end=inner_end, enlarged_kspace=enlarged_kspace)
-    filled_ksp = zero_padding3d(recombined, im_dim, im_dim,im_dim)
+    filled_ksp = zeropadding3d(recombined, resize_factor, inputtype_kspace=inputtype_kspace, outputtype_kspace=outputtype_kspace)
     return(filled_ksp)
