@@ -2,12 +2,16 @@ import matplotlib.pyplot as plt
 import sigpy as sp
 import numpy as np
 
-def zero_padding(cart_kspace,resize_x, resize_y):
+def zero_padding(cart_kspace,resize_factor, outputtype_kspace=True):
     n_coils = cart_kspace.shape[0]
+    resize_x = cart_kspace.shape[1] * resize_factor
+    resize_y = cart_kspace.shape[2] * resize_factor
     image_grid = sp.ifft(cart_kspace)
     enlarged_image_grid = sp.resize(image_grid, [n_coils,resize_x, resize_y])
-    enlarged_cartesian_kspace = sp.fft(enlarged_image_grid, axes=(-2, -1))
-    return enlarged_cartesian_kspace
+    if outputtype_kspace:
+        enlarged_cartesian_kspace = sp.fft(enlarged_image_grid, axes=(-2, -1))
+        return enlarged_cartesian_kspace
+    else: return enlarged_image_grid
 
 
 def inner_portion(enlarged_kspace, inner_sidelen):

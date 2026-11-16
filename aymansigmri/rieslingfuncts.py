@@ -53,3 +53,27 @@ def interleaved_reshape(kspace, trajectory, divis = 257):
     cleaned_trajectory = np.concatenate([st[1:] for st in segments_traj], axis=0)
 
     return (cleaned_kspace, cleaned_trajectory)
+
+
+
+
+
+
+zte_clean = f'{zte}_clean'
+
+data_out = np.moveaxis(cleaned_data, 0, -1)[None, None].astype(np.complex64)  # (1, 1, 64000, 248, 18)
+traj_out = cleaned_trajectory.astype(np.float32)                              # (64000, 248, 3)
+assert data_out.shape[2:4] == traj_out.shape[:2]
+
+with h5py.File(f'{zte}.h5', 'r') as src, h5py.File(f'{zte_clean}.h5', 'w') as out:
+    d = out.create_dataset('data', data=data_out, chunks=True, compression='gzip')
+    for i, label in enumerate(['t', 'slab', 'trace', 'sample', 'channel']):
+        d.dims[i].label = label
+
+    t = out.create_dataset('trajectory', data=traj_out, compression='gzip')
+    matrix = np.asarray(src['trajectory'].attrs['matrix']).reshape(-1)
+    t.attrs.create('matrix', matrix, dtype=h5py.h5t.array_create(h5py.h5t.NATIVE_INT64, (3,)))
+
+    src.copy('info', out)  # keep voxel size / origin / direction / tr
+
+print(data_out.shape, traj_out.shape)
