@@ -59,7 +59,7 @@ def interleaved_reshape(kspace, trajectory, divis = 257):
 
 
 
-zte_clean = f'{zte}_clean'
+'''zte_clean = f'{zte}_clean'
 
 data_out = np.moveaxis(cleaned_data, 0, -1)[None, None].astype(np.complex64)  # (1, 1, 64000, 248, 18)
 traj_out = cleaned_trajectory.astype(np.float32)                              # (64000, 248, 3)
@@ -76,4 +76,4 @@ with h5py.File(f'{zte}.h5', 'r') as src, h5py.File(f'{zte_clean}.h5', 'w') as ou
 
     src.copy('info', out)  # keep voxel size / origin / direction / tr
 
-print(data_out.shape, traj_out.shape)
+print(data_out.shape, traj_out.shape)'''
