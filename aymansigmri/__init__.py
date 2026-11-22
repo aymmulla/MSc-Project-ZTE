@@ -43,7 +43,6 @@ from .zeropadding import(
 from .loraks_svd import(
     sig_val_thresholding,
     sig_val_thresholding_jax,
-    sig_val_thresholding_jax_soft,
     svd_recon,
     LORAKS_loop,
     LORAKS_imputeals_ortho,
@@ -55,7 +54,6 @@ from .gridding_hankel import(
     nufft_degridding,
     hankel,
     hankel_H_averaged,
-    hankel_2,
     hankel_H_averaged_2,
     lift,
     unlift

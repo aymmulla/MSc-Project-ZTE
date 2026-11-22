@@ -7,41 +7,71 @@ from . import gridding_hankel
 from . import zeropadding
 
 
-def sig_val_thresholding_jax_soft(data, zero_thresh):
-    U, Sigma, Vh = jx.numpy.linalg.svd(data, full_matrices=False)
-    thresh = Sigma.max() * zero_thresh
-    S_reduced = jx.numpy.maximum(Sigma - thresh, 0)
-    return U, S_reduced, Vh
-
 def sig_val_thresholding_jax(data, zero_thresh):
+    """Singular Value Thresholding Function. Jax sped this up
+        Args: 
+            data: Hankel matrix
+            zero_thresh: 0 -> 1: By how much we threshold the data, smaller means lower rank
+        Returns:
+            U: Left singular vectors
+            S_reduced: Low rank singluar values
+            Vh: Right singular vectors (transposed)"""
     U, Sigma, Vh = jx.numpy.linalg.svd(data, full_matrices=False)
     thresh = Sigma.max() * zero_thresh
     S_reduced = jx.numpy.where(Sigma > thresh, Sigma, 0)
     return U, S_reduced, Vh
 
-def sig_val_thresholding_jax(data, zero_thresh):
-    U, Sigma, Vh = jx.numpy.linalg.svd(data, full_matrices=False)
-    thresh = Sigma.max() * zero_thresh
-    S_reduced = np.where(Sigma > thresh, Sigma, 0)
-    return U, S_reduced, Vh
 
 def sig_val_thresholding(data, zero_thresh):
+    """Singular Value Thresholding Function. Numpy means this is quite slow
+        Args: 
+            data: Hankel matrix
+            zero_thresh: 0 -> 1: By how much we threshold the data, smaller means lower rank
+            """
     U, Sigma, Vh = np.linalg.svd(data, full_matrices=False)
     max_val = np.max(Sigma)
     thresh = max_val*zero_thresh
-    arr = []
-    for i in range(len(Sigma)): ##Sigma[Sigma < thresh] = 0
-        if Sigma[i] > thresh:
-            arr.append(Sigma[i])
-        else: arr.append(0)
-    S_reduced = np.array(arr)
+    Sigma[Sigma < thresh] = 0
+    S_reduced = np.array(Sigma)
     return(U, S_reduced, Vh)
 
 def svd_recon(u, s_reduced, vh):
+    """ Post thresholding reconstruction
+        Args:
+            U: Left singular vectors
+            S_reduced: Low rank singluar values
+            Vh: Right singular vectors (transposed)
+        Returns:
+            Low rank estimate of the hankel array"""
     return ((u*s_reduced) @ vh)
 
 
 def LORAKS_loop(n_iters, window_size, zero_thresh, cartesian_inputkspace, dtg_mask, stride, im_dim, enlarged_kspace, inner_start, inner_end):
+    """LORAKS-style k-space infilling using hard singular value thresholding.
+        Each iteration:
+            1. Lifts the current k-space estimate into a block-Hankel matrix (hankel_2)
+            2. Sets to zero any singular value below zero_thresh * max(sigma) (sig_val_thresholding_jax)
+            3. Rebuilds the low-rank Hankel matrix and unlifts it back to k-space by
+               averaging overlapping windows (hankel_H_averaged_2)
+            4. Enforces data consistency: puts the measured samples (dtg_mask) back in
+        Args:
+            n_iters: Number of thresholding / data-consistency iterations
+            window_size: Hankel kernel size w (w x w patches)
+            zero_thresh: 0 -> 1: Singular values below zero_thresh * max(sigma) are zeroed;
+                         larger values give a lower rank
+            cartesian_inputkspace: Gridded Cartesian k-space (n_coils, Nx, Ny), with unsampled points empty
+            dtg_mask: Boolean mask (Nx, Ny), True where k-space was sampled. These points are kept fixed
+            stride: Stride used when lifting/unlifting the Hankel matrix
+            im_dim: Output image dimension (square) after zero-padding
+            enlarged_kspace: Full-size k-space that the infilled inner region is placed back into
+            inner_start: Start index of the inner (infilled) region within enlarged_kspace
+            inner_end: End index of the inner (infilled) region within enlarged_kspace
+        Returns:
+            output_kspace: Infilled inner k-space (n_coils, Nx, Ny), before it is put back into enlarged_kspace
+            im_0: Root-sum-of-squares coil-combined image magnitude (im_dim, im_dim)
+            deltas: List of relative changes ||k_i - k_{i-1}|| / ||k_{i-1}|| at the unsampled
+                    points, one per iteration after the first (for checking convergence)
+    """
     ksp_forhankel = cartesian_inputkspace.copy()
     iter_count = 0
     deltas = []
@@ -105,6 +135,32 @@ def softimpute_ALS_ortho(X_H, M_H, rank, lamda, n_iters, seed):
 
 
 def LORAKS_imputeals_ortho(n_iters, window_size, cartesian_inputkspace, dtg_mask, rank, lamda, stride, im_dim, enlarged_kspace, seed, inner_start, inner_end):
+    """LORAKS-style k-space infilling that fills in the Hankel matrix with soft-impute ALS.
+        Unlike LORAKS_loop, this completes the matrix once in Hankel space, then
+        unlifts it to k-space:
+            1. Zero-fills unsampled k-space and lifts it to a block-Hankel matrix
+            2. Lifts the sampling mask the same way to get the matching Hankel-domain mask
+            3. Fills in the Hankel matrix with softimpute_ALS_ortho
+            4. Unlifts to k-space (hankel_H_averaged_2) and puts the measured samples back
+            5. Places the result in enlarged_kspace, zero-pads it, and reconstructs an image
+        Args:
+            n_iters: Number of ALS sweeps passed to softimpute_ALS_ortho
+            window_size: Hankel kernel size w (w x w patches)
+            cartesian_inputkspace: Gridded Cartesian k-space (n_coils, Nx, Ny)
+            dtg_mask: Boolean mask (Nx, Ny), True where k-space was sampled
+            rank: Rank of the ALS factorisation
+            lamda: Regularisation weight for the ALS
+            stride: Stride used when lifting/unlifting the Hankel matrix
+            im_dim: Output image dimension (square) after zero-padding
+            enlarged_kspace: Full-size k-space that the infilled inner region is placed back into
+            seed: Random seed for the ALS initialisation
+            inner_start: Start index of the inner (infilled) region within enlarged_kspace
+            inner_end: End index of the inner (infilled) region within enlarged_kspace
+        Returns:
+            filled_ksp: Zero-padded full k-space (n_coils, im_dim, im_dim)
+            im_0: Root-sum-of-squares coil-combined image magnitude (im_dim, im_dim)
+            jigsaw_ksp: The enlarged k-space with the infilled inner region in place, before zero-padding
+    """
     ksp_forhankel = cartesian_inputkspace.copy()
     ksp_zerod = ksp_forhankel * dtg_mask
     hankel_matrix, n_coils, Numx, Numy = gridding_hankel.hankel_2(kspace=ksp_zerod, w=window_size, s=stride)

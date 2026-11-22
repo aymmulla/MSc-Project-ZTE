@@ -1,7 +1,30 @@
 import sigpy as sp
 import numpy as np
 
+#---- Gridding and Degridding Functions----
+
+def nufft_gridding(kspace, coords):
+    """Gridding Function to transform multiple coils of radial kspace to cartesian form via a NUFFT Adjoint
+            Args: kspace_data: Radial kspace array 
+                  coord: Radial coordinate array
+            Returns: Cartesian kspace array
+            """
+    n_coils = kspace.shape[0]
+    n_samples = kspace.shape[-1]
+    dcf = np.sqrt(coords[..., 0]**2 + coords[..., 1]**2)
+    imagegrid = sp.nufft_adjoint(kspace * dcf, coords, oshape=(n_coils, n_samples, n_samples))
+    gridded_data = sp.fft(imagegrid, axes=(-2, -1))
+    return gridded_data
+
+
 def gridding_one_coil(kspace_data, coord):
+    """NOTE: This function has been replaced and rewritten via Image domaint trip
+        Gridding Function to transform on coil of radial domain kspace to cartesian form
+        PROBLEMS: Sensitive to interpolation errors
+    Args: kspace_data: One coil of radial kspace 
+          coord: Radial coordinate array
+    Returns: One coil cartesian array
+    """
     dcf = np.sqrt(coord[..., 0]**2 + coord[..., 1]**2)
     shape=(len(coord[1]), len(coord[1]))
     #coord_reindexed = coord + np.array(shape) // 2 
@@ -11,22 +34,31 @@ def gridding_one_coil(kspace_data, coord):
 
 
 def gridding_operator(kspace_data, coord):
+    """NOTE: This function has been replaced and rewritten via Image domaint trip
+            Gridding Function to transform multiple coils of radial domain kspace to cartesian form
+            PROBLEMS: Sensitive to interpolation errors
+        Args: kspace_data: Radial kspace array 
+              coord: Radial coordinate array
+        Returns: Cartesian kspace array
+        """
     n_coils = kspace_data.shape[0]
     shape=(len(coord[1]), len(coord[1]))
-    kspace_cartesian = np.zeros((n_coils, *shape), dtype=complex)
-    
+    kspace_cartesian = np.zeros((n_coils, * shape), dtype=complex)
     dcf = np.sqrt(coord[..., 0]**2 + coord[..., 1]**2)
-    
-
-    
     for coil in range(n_coils):
         kspace_cartesian[coil] = sp.gridding(kspace_data[coil] * dcf, coord, shape=shape, kernel='kaiser_bessel')
         kspace_cartesian[coil] = np.fft.fftshift(kspace_cartesian[coil])
-    
     return kspace_cartesian
 
 
 def gridding_operator_H(cartesian_data,coord):
+    """NOTE: Redundant Function - never made this work
+            De-gridding Function to transform on coil of radial domain kspace to cartesian form
+            PROBLEMS: Sensitive to interpolation errors
+        Args: kspace_data: Cartesian kspace array
+              coord: Radial coordinate array
+        Returns: Radial kspace arrat
+        """
     n_coils = cartesian_data.shape[0]
     spokes_points = coord.shape[:-1]
     kspace_data = np.zeros((n_coils, *spokes_points), dtype=complex)
@@ -37,20 +69,22 @@ def gridding_operator_H(cartesian_data,coord):
     
     return kspace_data
 
-def nufft_gridding(kspace, coords):
-    n_coils = kspace.shape[0]
-    n_samples = kspace.shape[-1]
-    dcf = np.sqrt(coords[..., 0]**2 + coords[..., 1]**2)
-    imagegrid = sp.nufft_adjoint(kspace * dcf, coords, oshape=(n_coils, n_samples, n_samples))
-    gridded_data = sp.fft(imagegrid, axes=(-2, -1))
-    return gridded_data
-
 
 def nufft_degridding(cartesian_kspace, coords):
+    """Degridding Function to transform multiple coils of cartesian kspace to radial form via a forward NUFFT
+    NOTE: This failed due to interpolation error
+            Args: kspace_data: Radial kspace array 
+                  coord: Radial coordinate array
+            Returns: Cartesian kspace array
+            """
     n_coils = cartesian_kspace.shape[0]
     image = sp.ifft(cartesian_kspace, axes=(-2, -1))
     radial_kspace = sp.nufft(image, coord=coords)
     return radial_kspace
+
+
+#---- Lifting and Unlifting Functions----
+#---- Take the cartesian array and tranform to hankel space ----
 
 def hankel(kspace, w):
     """TWO DIMENSIONS: Lift to Hankel Form

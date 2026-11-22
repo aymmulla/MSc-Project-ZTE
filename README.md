@@ -1,6 +1,12 @@
 # MSc-Project-ZTE
 
-MSc Physics project at King's College London. 
+Initially MSc Physics project at King's College London.
+
+Now working on this... for fun(?)
+
+See most of the useful code in aymansigmri, rest is notebooks of me running tests
+
+Infilling work can be found in 'loraks_svd.py'
 
 Investigating different approaches to fill the dead time gap in zero echo time magnetic resonance imaging (MRI)
 
