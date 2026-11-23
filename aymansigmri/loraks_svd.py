@@ -107,30 +107,49 @@ def LORAKS_loop(n_iters, window_size, zero_thresh, cartesian_inputkspace, dtg_ma
 
 
 def softimpute_ALS_ortho(X_H, M_H, rank, lamda, n_iters, seed):
-        I = np.eye(rank)
-        m,n = np.shape(X_H)
-        rng = np.random.default_rng(seed)
-        U = rng.standard_normal((m, rank)) + 1j * rng.standard_normal((m, rank))
-        V = np.zeros((n, rank),dtype=np.complex64)
-        U, _ = np.linalg.qr(U)
-        D = I.copy()
+    """ SoftImpute_ALS: With Orthonornalised vector A. We found that the Algorithm was better behaved when U was orthonormalised
+        and converged to infilled results over less iterations.
+        Initially A is set to vector of random entries, and B to a vector of zeroes
+        Each iteration:
+            1. X start is filled with the lifted hankel matrix X_H for acquired entries, and the product of AB^H in the dead time gap
+               where ^H denotes the hermitian transpose
+            2. A and B are iteratively approximed through minimisation of the following
+               ||P_M(X - A B^H)||_F^2 + lamda * (||A||_F^2 + ||B||_F^2).
+               We solve for A and B seperately and minimise the distance between their product and the acquired values
+        Args:
+            X_H: Lifted Hankel array of shape mxn
+            M_H: Lifted mask array with acquired positions 1 and unacquired positions 0
+            rank: The rank of the ALS factorisation - the max rank that the data can hold
+            n_iters: Number of ALS sweeps
+            seed: Random seed for the overdermined matrix A
+        Retuns:
+            ABt: Low-rank estimate A B^H of the full Hankel matrix (m, n). Observed entries
+                 are not forced back to X_H, so data consistency has to be applied afterwards
+        """    
+    I = np.eye(rank)
+    m,n = np.shape(X_H)
+    rng = np.random.default_rng(seed)
+    U = rng.standard_normal((m, rank)) + 1j * rng.standard_normal((m, rank))
+    V = np.zeros((n, rank),dtype=np.complex64)
+    U, _ = np.linalg.qr(U)
+    D = I.copy()
 
 
-        A = np.dot(U,D)
-        B = np.dot(V,D)
-        iter_count = 0
-        ABt = A @ B.conj().T
-        
-        while iter_count < n_iters:
-            X_star = np.where(M_H, X_H, ABt)
-            B = X_star.conj().T @ A @ np.linalg.inv(A.conj().T @ A + lamda*I)
-            ABt = A @ B.conj().T
+    A = np.dot(U,D)
+    B = np.dot(V,D)
+    iter_count = 0
+    ABt = A @ B.conj().T
     
-            X_star = np.where(M_H, X_H, ABt)
-            A = X_star @ B @ np.linalg.inv(B.conj().T @ B + lamda*I)
-            ABt = A @ B.conj().T
-            iter_count += 1
-        return(ABt)
+    while iter_count < n_iters:
+        X_star = np.where(M_H, X_H, ABt)
+        B = X_star.conj().T @ A @ np.linalg.inv(A.conj().T @ A + lamda*I)
+        ABt = A @ B.conj().T
+
+        X_star = np.where(M_H, X_H, ABt)
+        A = X_star @ B @ np.linalg.inv(B.conj().T @ B + lamda*I)
+        ABt = A @ B.conj().T
+        iter_count += 1
+    return(ABt)
 
 
 
