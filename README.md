@@ -2,7 +2,7 @@
 
 Initially MSc Physics project at King's College London.
 
-Now working on this... for fun(?)
+Now working on this to keep busy and engaged. Hoping to get something published
 
 See most of the useful code in aymansigmri, rest is notebooks of me running tests
 
